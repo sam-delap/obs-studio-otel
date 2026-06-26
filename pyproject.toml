@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=80", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "obs-studio-otel"
+description = "Scrape OBS Studio WebSocket stream health/network metrics and emit them as OpenTelemetry spans."
+readme = "README.md"
+requires-python = ">=3.14"
+license = "MIT"
+authors = [{ name = "obs-studio-otel contributors" }]
+keywords = ["obs", "obs-studio", "opentelemetry", "otel", "observability", "streaming"]
+dynamic = ["version"]
+dependencies = [
+    "obsws-python>=1.8",
+    "opentelemetry-api>=1.43",
+    "opentelemetry-sdk>=1.43",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.43",
+]
+
+[project.urls]
+Homepage = "https://github.com/sam-delap/obs-studio-otel"
+Repository = "https://github.com/sam-delap/obs-studio-otel"
+
+[project.scripts]
+obs-otel = "obs_otel.main:run"
+
+[dependency-groups]
+dev = ["ruff>=0.8"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools_scm]
+version_file = "src/obs_otel/_version.py"
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+src = ["src"]
+extend-exclude = ["src/obs_otel/_version.py"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+    "C4",  # flake8-comprehensions
+]
+
+[tool.ruff.format]
+docstring-code-format = true

@@ -1,0 +1,29 @@
+# NOTE: .git is intentionally NOT ignored — the Dockerfile bind-mounts it at
+# build time so setuptools_scm can derive an accurate version. It is never
+# copied into the final image.
+
+# Python caches / build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# setuptools_scm generated version file (regenerated during build)
+src/obs_otel/_version.py
+
+# Virtual environments
+.venv/
+venv/
+
+# Tooling caches
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+
+# Project meta not needed in the image
+.github/
+.gitignore
+.dockerignore
+.releaserc.yml
