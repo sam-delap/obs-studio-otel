@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# setuptools_scm generated version file (never committed)
+src/obs_otel/_version.py
+
+# Virtual environments
+.venv/
+venv/
+
+# Tooling caches
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+
+# Node (semantic-release runs via npx, but ignore stray installs)
+node_modules/
+
+# Editor / OS
+.DS_Store
+*.swp

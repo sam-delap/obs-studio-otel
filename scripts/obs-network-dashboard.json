@@ -1,0 +1,368 @@
+{
+  "title": "OBS Studio — Stream Health & Network",
+  "description": "Network and stream-health metrics scraped from the OBS WebSocket and emitted as obs.scrape spans by obs-studio-otel. Visualizes congestion, throughput, dropped/skipped frames, and supporting render/system stats.",
+  "tags": ["obs", "obs-studio", "streaming", "network", "obs-studio-otel"],
+  "layout": [
+    { "i": "w-output-active", "x": 0, "y": 0, "w": 4, "h": 4, "moved": false, "static": false },
+    { "i": "w-congestion", "x": 4, "y": 0, "w": 4, "h": 4, "moved": false, "static": false },
+    { "i": "w-dropped-pct", "x": 8, "y": 0, "w": 4, "h": 4, "moved": false, "static": false },
+    { "i": "w-bytes-rate", "x": 0, "y": 4, "w": 6, "h": 6, "moved": false, "static": false },
+    { "i": "w-congestion-ts", "x": 6, "y": 4, "w": 6, "h": 6, "moved": false, "static": false },
+    { "i": "w-dropped-pct-ts", "x": 0, "y": 10, "w": 6, "h": 6, "moved": false, "static": false },
+    { "i": "w-frames", "x": 6, "y": 10, "w": 6, "h": 6, "moved": false, "static": false },
+    { "i": "w-fps", "x": 0, "y": 16, "w": 6, "h": 6, "moved": false, "static": false },
+    { "i": "w-render-time", "x": 6, "y": 16, "w": 6, "h": 6, "moved": false, "static": false },
+    { "i": "w-scrape-health", "x": 0, "y": 22, "w": 12, "h": 6, "moved": false, "static": false }
+  ],
+  "variables": {},
+  "widgets": [
+    {
+      "id": "w-output-active",
+      "title": "Stream Output Active",
+      "description": "Whether the OBS stream output is currently active (max over the interval; 1 = streaming).",
+      "panelTypes": "value",
+      "yAxisUnit": "none",
+      "query": {
+        "queryType": "builder",
+        "builder": {
+          "queryData": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "dataSource": "traces",
+              "aggregateOperator": "max",
+              "timeAggregation": "max",
+              "spaceAggregation": "max",
+              "aggregateAttribute": { "key": "obs.stream.output_active", "dataType": "bool", "type": "tag", "isColumn": false },
+              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
+              "groupBy": [],
+              "having": [],
+              "legend": "output active",
+              "disabled": false,
+              "stepInterval": 60,
+              "orderBy": [],
+              "limit": null,
+              "reduceTo": "last"
+            }
+          ],
+          "queryFormulas": []
+        }
+      }
+    },
+    {
+      "id": "w-congestion",
+      "title": "Network Congestion (current)",
+      "description": "OBS output network congestion (0.0–1.0). Sustained high values indicate the encoder cannot push data fast enough.",
+      "panelTypes": "value",
+      "yAxisUnit": "none",
+      "query": {
+        "queryType": "builder",
+        "builder": {
+          "queryData": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "dataSource": "traces",
+              "aggregateOperator": "avg",
+              "timeAggregation": "avg",
+              "spaceAggregation": "avg",
+              "aggregateAttribute": { "key": "obs.stream.output_congestion", "dataType": "float64", "type": "tag", "isColumn": false },
+              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
+              "groupBy": [],
+              "having": [],
+              "legend": "congestion",
+              "disabled": false,
+              "stepInterval": 60,
+              "orderBy": [],
+              "limit": null,
+              "reduceTo": "last"
+            }
+          ],
+          "queryFormulas": []
+        }
+      }
+    },
+    {
+      "id": "w-dropped-pct",
+      "title": "Dropped Frames % (current)",
+      "description": "Percentage of output frames dropped (skipped / total × 100). Network-driven frame loss.",
+      "panelTypes": "value",
+      "yAxisUnit": "percent",
+      "query": {
+        "queryType": "builder",
+        "builder": {
+          "queryData": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "dataSource": "traces",
+              "aggregateOperator": "avg",
+              "timeAggregation": "avg",
+              "spaceAggregation": "avg",
+              "aggregateAttribute": { "key": "obs.stream.output_dropped_frames_pct", "dataType": "float64", "type": "tag", "isColumn": false },
+              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
+              "groupBy": [],
+              "having": [],
+              "legend": "dropped %",
+              "disabled": false,
+              "stepInterval": 60,
+              "orderBy": [],
+              "limit": null,
+              "reduceTo": "last"
+            }
+          ],
+          "queryFormulas": []
+        }
+      }
+    },
+    {
+      "id": "w-bytes-rate",
+      "title": "Output Bytes Sent (cumulative)",
+      "description": "Total bytes sent by the OBS stream output. Rises while streaming; flat when idle.",
+      "panelTypes": "graph",
+      "yAxisUnit": "bytes",
+      "query": {
+        "queryType": "builder",
+        "builder": {
+          "queryData": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "dataSource": "traces",
+              "aggregateOperator": "max",
+              "timeAggregation": "max",
+              "spaceAggregation": "max",
+              "aggregateAttribute": { "key": "obs.stream.output_bytes", "dataType": "float64", "type": "tag", "isColumn": false },
+              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
+              "groupBy": [],
+              "having": [],
+              "legend": "bytes sent",
+              "disabled": false,
+              "stepInterval": 60,
+              "orderBy": [],
+              "limit": null,
+              "reduceTo": "last"
+            }
+          ],
+          "queryFormulas": []
+        }
+      }
+    },
+    {
+      "id": "w-congestion-ts",
+      "title": "Network Congestion (over time)",
+      "description": "Average OBS output congestion over time (0.0–1.0).",
+      "panelTypes": "graph",
+      "yAxisUnit": "none",
+      "query": {
+        "queryType": "builder",
+        "builder": {
+          "queryData": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "dataSource": "traces",
+              "aggregateOperator": "avg",
+              "timeAggregation": "avg",
+              "spaceAggregation": "avg",
+              "aggregateAttribute": { "key": "obs.stream.output_congestion", "dataType": "float64", "type": "tag", "isColumn": false },
+              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
+              "groupBy": [],
+              "having": [],
+              "legend": "congestion",
+              "disabled": false,
+              "stepInterval": 60,
+              "orderBy": [],
+              "limit": null,
+              "reduceTo": "avg"
+            }
+          ],
+          "queryFormulas": []
+        }
+      }
+    },
+    {
+      "id": "w-dropped-pct-ts",
+      "title": "Dropped Frames % (over time)",
+      "description": "Output dropped-frame percentage over time.",
+      "panelTypes": "graph",
+      "yAxisUnit": "percent",
+      "query": {
+        "queryType": "builder",
+        "builder": {
+          "queryData": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "dataSource": "traces",
+              "aggregateOperator": "avg",
+              "timeAggregation": "avg",
+              "spaceAggregation": "avg",
+              "aggregateAttribute": { "key": "obs.stream.output_dropped_frames_pct", "dataType": "float64", "type": "tag", "isColumn": false },
+              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
+              "groupBy": [],
+              "having": [],
+              "legend": "dropped %",
+              "disabled": false,
+              "stepInterval": 60,
+              "orderBy": [],
+              "limit": null,
+              "reduceTo": "avg"
+            }
+          ],
+          "queryFormulas": []
+        }
+      }
+    },
+    {
+      "id": "w-frames",
+      "title": "Output Frames: total vs skipped",
+      "description": "Total delivered vs skipped output frames over time.",
+      "panelTypes": "graph",
+      "yAxisUnit": "none",
+      "query": {
+        "queryType": "builder",
+        "builder": {
+          "queryData": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "dataSource": "traces",
+              "aggregateOperator": "max",
+              "timeAggregation": "max",
+              "spaceAggregation": "max",
+              "aggregateAttribute": { "key": "obs.stream.output_total_frames", "dataType": "float64", "type": "tag", "isColumn": false },
+              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
+              "groupBy": [],
+              "having": [],
+              "legend": "total frames",
+              "disabled": false,
+              "stepInterval": 60,
+              "orderBy": [],
+              "limit": null,
+              "reduceTo": "last"
+            },
+            {
+              "queryName": "B",
+              "expression": "B",
+              "dataSource": "traces",
+              "aggregateOperator": "max",
+              "timeAggregation": "max",
+              "spaceAggregation": "max",
+              "aggregateAttribute": { "key": "obs.stream.output_skipped_frames", "dataType": "float64", "type": "tag", "isColumn": false },
+              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
+              "groupBy": [],
+              "having": [],
+              "legend": "skipped frames",
+              "disabled": false,
+              "stepInterval": 60,
+              "orderBy": [],
+              "limit": null,
+              "reduceTo": "last"
+            }
+          ],
+          "queryFormulas": []
+        }
+      }
+    },
+    {
+      "id": "w-fps",
+      "title": "Active FPS",
+      "description": "Rendered frames per second reported by OBS GetStats.",
+      "panelTypes": "graph",
+      "yAxisUnit": "none",
+      "query": {
+        "queryType": "builder",
+        "builder": {
+          "queryData": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "dataSource": "traces",
+              "aggregateOperator": "avg",
+              "timeAggregation": "avg",
+              "spaceAggregation": "avg",
+              "aggregateAttribute": { "key": "obs.stats.active_fps", "dataType": "float64", "type": "tag", "isColumn": false },
+              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
+              "groupBy": [],
+              "having": [],
+              "legend": "fps",
+              "disabled": false,
+              "stepInterval": 60,
+              "orderBy": [],
+              "limit": null,
+              "reduceTo": "avg"
+            }
+          ],
+          "queryFormulas": []
+        }
+      }
+    },
+    {
+      "id": "w-render-time",
+      "title": "Avg Frame Render Time (ms)",
+      "description": "Average frame render time. Rising values can precede skipped/dropped frames.",
+      "panelTypes": "graph",
+      "yAxisUnit": "ms",
+      "query": {
+        "queryType": "builder",
+        "builder": {
+          "queryData": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "dataSource": "traces",
+              "aggregateOperator": "avg",
+              "timeAggregation": "avg",
+              "spaceAggregation": "avg",
+              "aggregateAttribute": { "key": "obs.stats.average_frame_render_time_ms", "dataType": "float64", "type": "tag", "isColumn": false },
+              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
+              "groupBy": [],
+              "having": [],
+              "legend": "render time",
+              "disabled": false,
+              "stepInterval": 60,
+              "orderBy": [],
+              "limit": null,
+              "reduceTo": "avg"
+            }
+          ],
+          "queryFormulas": []
+        }
+      }
+    },
+    {
+      "id": "w-scrape-health",
+      "title": "Scrape Health (spans per interval)",
+      "description": "Count of obs.scrape spans. Use the status filter in the explorer to distinguish OK vs ERROR scrapes; a drop here means the scraper or OBS connection is failing.",
+      "panelTypes": "graph",
+      "yAxisUnit": "none",
+      "query": {
+        "queryType": "builder",
+        "builder": {
+          "queryData": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "dataSource": "traces",
+              "aggregateOperator": "count",
+              "timeAggregation": "count",
+              "spaceAggregation": "sum",
+              "aggregateAttribute": { "key": "", "dataType": "", "type": "", "isColumn": false },
+              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
+              "groupBy": [ { "key": "status_code_string", "dataType": "string", "type": "tag", "isColumn": true } ],
+              "having": [],
+              "legend": "scrapes",
+              "disabled": false,
+              "stepInterval": 60,
+              "orderBy": [],
+              "limit": null,
+              "reduceTo": "sum"
+            }
+          ],
+          "queryFormulas": []
+        }
+      }
+    }
+  ]
+}
