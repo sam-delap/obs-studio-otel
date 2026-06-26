@@ -177,12 +177,29 @@ creates a new dashboard each run).
 
 ## 6. Teardown
 
+The quickest way is the teardown script, which removes the scraper container and
+the SigNoz stack. **It removes the SigNoz volumes by default** (stored spans,
+metastore, dashboards, accounts) for a clean slate:
+
+```bash
+./scripts/teardown.sh                 # remove scraper + SigNoz + volumes (default)
+./scripts/teardown.sh --keep-volumes  # remove containers but keep stored data
+```
+
+If your Docker socket needs `sudo`, pass the command in:
+
+```bash
+DOCKER='sudo docker' ./scripts/teardown.sh
+```
+
+Or do it manually:
+
 ```bash
 # Stop the scraper
-docker rm -f obs-otel-test
+sudo docker rm -f obs-otel-test
 
 # Tear down SigNoz (drop -v to keep stored telemetry)
-docker compose -f ~/signoz/pours/deployment/compose.yaml down -v
+sudo docker compose -f /tmp/opencode/signoz/pours/deployment/compose.yaml down -v
 
 # Optional: remove the local baseline tag
 git tag -d v0.1.0
