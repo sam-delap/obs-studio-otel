@@ -2,15 +2,15 @@
 
 A small Python service that scrapes stream **health** and **network** metrics
 from an [OBS Studio](https://obsproject.com/) WebSocket (v5) endpoint and emits
-them as **OpenTelemetry spans** over OTLP/gRPC to a collector of your choice.
+them as **OpenTelemetry log events** over OTLP/gRPC to a collector of your choice.
 
 Each scrape cycle issues two OBS WebSocket requests — `GetStreamStatus` and
 `GetStats` — and records the results as attributes on a single `obs.scrape`
-span. The service is designed to run as a container.
+log event. The service is designed to run as a container.
 
 ## Metrics collected
 
-Each `obs.scrape` span carries:
+Each `obs.scrape` log event carries:
 
 | Attribute | Source | Description |
 | --- | --- | --- |
@@ -34,8 +34,9 @@ Each `obs.scrape` span carries:
 | `obs.stats.output_skipped_frames` | GetStats | Output-thread skipped frames |
 | `obs.stats.output_total_frames` | GetStats | Output-thread total frames |
 
-On a connection or protocol error the span is marked `ERROR`, the exception is
-recorded, and the client reconnects on the next cycle.
+On a connection or protocol error the scrape emits an `obs.scrape` log event at
+`ERROR` severity with `obs.connected=false`, the exception is recorded as
+`exception.*` attributes, and the client reconnects on the next cycle.
 
 ## Configuration
 
@@ -86,7 +87,10 @@ uv run ruff format --check .  # validate (used in CI)
 ## Versioning & releases
 
 - **Versions are derived from git tags** via `setuptools-scm`. The container
-  build bind-mounts `.git` so the in-image `__version__` matches the release.
+  build does not read git; `publish.yml` passes the release version into the
+  image via the `SETUPTOOLS_SCM_PRETEND_VERSION_FOR_OBS_STUDIO_OTEL` build-arg
+  (the tag with its leading `v` stripped) so the in-image `__version__` matches
+  the release.
 - Releases are automated with
   [semantic-release](https://semantic-release.org/) driven by
   [Conventional Commits](https://www.conventionalcommits.org/):

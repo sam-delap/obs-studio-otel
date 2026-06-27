@@ -1,13 +1,12 @@
-"""OpenTelemetry tracer setup with an OTLP/gRPC span exporter."""
+"""OpenTelemetry logs setup: emit OBS scrapes as canonical log events."""
 
 from __future__ import annotations
 
-from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry._logs import Logger, set_logger_provider
+from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
+from opentelemetry.sdk._logs import LoggerProvider
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.trace import Tracer
 
 from . import __version__
 from .config import Config
@@ -15,13 +14,7 @@ from .config import Config
 INSTRUMENTATION_NAME = "obs-studio-otel"
 
 
-def setup_tracing(config: Config) -> tuple[TracerProvider, Tracer]:
-    """Configure the global tracer provider and return it with a tracer.
-
-    The exporter targets the configured OTLP/gRPC endpoint. Standard
-    ``OTEL_EXPORTER_OTLP_*`` environment variables are also honoured by the
-    underlying exporter, so headers/TLS can be tuned without code changes.
-    """
+def setup_logging(config: Config) -> tuple[LoggerProvider, Logger]:
     resource = Resource.create(
         {
             "service.name": config.service_name,
@@ -30,14 +23,12 @@ def setup_tracing(config: Config) -> tuple[TracerProvider, Tracer]:
             "obs.port": config.obs_port,
         }
     )
-
-    provider = TracerProvider(resource=resource)
-    exporter = OTLPSpanExporter(
+    provider = LoggerProvider(resource=resource)
+    exporter = OTLPLogExporter(
         endpoint=config.otlp_endpoint,
         insecure=config.otlp_insecure,
     )
-    provider.add_span_processor(BatchSpanProcessor(exporter))
-    trace.set_tracer_provider(provider)
-
-    tracer = provider.get_tracer(INSTRUMENTATION_NAME, __version__)
-    return provider, tracer
+    provider.add_log_record_processor(BatchLogRecordProcessor(exporter))
+    set_logger_provider(provider)
+    otel_logger = provider.get_logger(INSTRUMENTATION_NAME, __version__)
+    return provider, otel_logger

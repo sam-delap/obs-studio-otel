@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "obs-studio-otel"
-description = "Scrape OBS Studio WebSocket stream health/network metrics and emit them as OpenTelemetry spans."
+description = "Scrape OBS Studio WebSocket stream health/network metrics and emit them as OpenTelemetry log events."
 readme = "README.md"
 requires-python = ">=3.14"
 license = "MIT"

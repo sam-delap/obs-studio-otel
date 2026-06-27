@@ -12,7 +12,7 @@ instance and visualizing the scraped stream-health / network metrics in
 | --- | --- | --- |
 | **OBS Studio** | Source of metrics; WebSocket v5 server (auth on) | host, `:4455` |
 | **SigNoz stack** | OTel collector + ClickHouse + ClickHouse Keeper + Postgres + UI | Docker (via Foundry) |
-| **obs-studio-otel** | Scrapes OBS, emits `obs.scrape` spans over OTLP/gRPC | Docker container |
+| **obs-studio-otel** | Scrapes OBS, emits `obs.scrape` log events over OTLP/gRPC | Docker container |
 
 SigNoz's stack already includes an OpenTelemetry collector that accepts OTLP on
 `4317` (gRPC) and `4318` (HTTP), so **no separate collector is required** — the
@@ -76,14 +76,13 @@ the first-run account setup if prompted.
 
 ## 2. Build the scraper image
 
-The Dockerfile derives its version from git via `setuptools-scm`. For a local
-build where the bind-mounted `.git` is owned by a different uid than the build
-user, pass the version explicitly:
+The image version is supplied at build time via the
+`SETUPTOOLS_SCM_PRETEND_VERSION_FOR_OBS_STUDIO_OTEL` build-arg (the build does
+not read git). The arg is **required** — a build without it fails with
+`setuptools-scm was unable to detect version`.
 
 ```bash
-# From the repo root. Create the baseline tag once if it doesn't exist:
-git tag v0.1.0 2>/dev/null || true
-
+# From the repo root. Pass the version you want baked into the image:
 docker build \
   --build-arg SETUPTOOLS_SCM_PRETEND_VERSION_FOR_OBS_STUDIO_OTEL=0.1.0 \
   -t obs-studio-otel:test .
@@ -113,7 +112,7 @@ docker logs -f obs-otel-test
 
 Look for `Successfully identified ReqClient with the server` and the absence of
 `Scrape failed` warnings. Within a few seconds, `obs-studio-scraper` will appear
-under **Services** in the SigNoz UI, and `obs.scrape` spans under **Traces**.
+as a source under **Logs** in the SigNoz UI, emitting `obs.scrape` log events.
 
 ## 4. Create the dashboard
 
@@ -162,7 +161,7 @@ defines 10 panels, all filtered to `service.name = obs-studio-scraper`:
 | Output Frames: total vs skipped | `obs.stream.output_total_frames`, `obs.stream.output_skipped_frames` |
 | Active FPS | `obs.stats.active_fps` |
 | Avg Frame Render Time | `obs.stats.average_frame_render_time_ms` |
-| Scrape Health | `count()` of `obs.scrape` spans grouped by `status_code_string` (Ok/Error) |
+| Scrape Health | `count()` of `obs.scrape` log events grouped by `severity_text` (INFO/ERROR) |
 
 To re-create or update the dashboard, edit the JSON and re-run the script (it
 creates a new dashboard each run).
@@ -172,13 +171,13 @@ creates a new dashboard each run).
 - **UI:** open the dashboard URL printed by the script. While OBS is idle the
   network panels read `0`; start streaming in OBS to see congestion, bytes, and
   frame counters move. FPS, memory, and render-time panels populate immediately.
-- **Scrape Health** should show a steady stream of `Ok` spans. A drop to zero or
-  a rise in `Error` indicates the scraper or its OBS connection is failing.
+- **Scrape Health** should show a steady stream of `INFO` events. A drop to zero
+  or a rise in `ERROR` indicates the scraper or its OBS connection is failing.
 
 ## 6. Teardown
 
 The quickest way is the teardown script, which removes the scraper container and
-the SigNoz stack. **It removes the SigNoz volumes by default** (stored spans,
+the SigNoz stack. **It removes the SigNoz volumes by default** (stored logs,
 metastore, dashboards, accounts) for a clean slate:
 
 ```bash
@@ -200,9 +199,6 @@ sudo docker rm -f obs-otel-test
 
 # Tear down SigNoz (drop -v to keep stored telemetry)
 sudo docker compose -f /tmp/opencode/signoz/pours/deployment/compose.yaml down -v
-
-# Optional: remove the local baseline tag
-git tag -d v0.1.0
 ```
 
 ## Troubleshooting
@@ -213,6 +209,6 @@ git tag -d v0.1.0
 - **Scraper logs an auth error:** check `OBS_PASSWORD`.
 - **Dashboard script returns HTTP 403:** the service account lacks a
   write-capable role — recreate it (or its key) with the **Admin** role.
-- **Panels show "no data":** confirm spans are arriving (Services →
-  `obs-studio-scraper`) and that the dashboard time range covers the period the
-  scraper has been running.
+- **Panels show "no data":** confirm log events are arriving (Logs explorer,
+  filter `service.name = obs-studio-scraper`) and that the dashboard time range
+  covers the period the scraper has been running.

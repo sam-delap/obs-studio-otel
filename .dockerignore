@@ -1,6 +1,7 @@
-# NOTE: .git is intentionally NOT ignored — the Dockerfile bind-mounts it at
-# build time so setuptools_scm can derive an accurate version. It is never
-# copied into the final image.
+# The image version is supplied via the
+# SETUPTOOLS_SCM_PRETEND_VERSION_FOR_OBS_STUDIO_OTEL build-arg; the build does
+# not read git, so .git is not needed in the build context.
+.git/
 
 # Python caches / build artifacts
 __pycache__/
