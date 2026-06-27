@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def _safe(value: float | int | None) -> float | int:
-    """Coerce a possibly-missing numeric field to a span-friendly value."""
+    """Coerce a possibly-missing numeric field to an event-friendly value."""
     return value if value is not None else 0
 
 
@@ -67,9 +67,9 @@ class OBSScraper:
     def scrape(self) -> dict[str, Any]:
         """Fetch stream status and stats from OBS.
 
-        Returns a flat dict of span attributes. Raises on connection/protocol
-        errors so the caller can mark the span as failed and trigger a
-        reconnect on the next cycle.
+        Returns a flat dict of log-event attributes. Raises on
+        connection/protocol errors so the caller can emit a failure event and
+        trigger a reconnect on the next cycle.
         """
         try:
             client = self._connect()
