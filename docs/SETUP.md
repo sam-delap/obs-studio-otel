@@ -150,15 +150,19 @@ On success the script prints the dashboard URL, e.g.
 ### The dashboard
 
 [`scripts/obs-network-dashboard.json`](../scripts/obs-network-dashboard.json)
-defines 10 panels, all filtered to `service.name = obs-studio-scraper`:
+defines 11 panels, all filtered to `service.name = obs-studio-scraper`.
+Derived views (percentages) are computed at query time via SigNoz query
+formulas rather than baked into the scraper, so new views can be added as
+panels without changing the emitter:
 
 | Panel | Metric |
 | --- | --- |
-| Stream Output Active | `obs.stream.output_active` |
-| Network Congestion (current / over time) | `obs.stream.output_congestion` |
-| Dropped Frames % (current / over time) | `obs.stream.output_dropped_frames_pct` |
+| Stream Output Active | `obs.stream.output_active` (0/1 over time) |
+| Network Congestion (current / over time) | `obs.stream.output_congestion` × 100 (query-time %) |
+| Dropped Frames % (current / over time) | `obs.stream.output_skipped_frames` / `obs.stream.output_total_frames` × 100 (query-time %) |
 | Output Bytes Sent | `obs.stream.output_bytes` |
 | Output Frames: total vs skipped | `obs.stream.output_total_frames`, `obs.stream.output_skipped_frames` |
+| Dropped Frames vs. Reconnection Events | dropped % vs `obs.stream.output_reconnecting` (upstream RTMPS) |
 | Active FPS | `obs.stats.active_fps` |
 | Avg Frame Render Time | `obs.stats.average_frame_render_time_ms` |
 | Scrape Health | `count()` of `obs.scrape` log events grouped by `severity_text` (INFO/ERROR) |
