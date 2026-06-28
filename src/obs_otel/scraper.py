@@ -140,7 +140,7 @@ class OBSEventListener:
             "obs.stream.output_state": str(data.output_state),
         }
 
-    def _on_stream_state_changed(self, data: Any) -> None:
+    def on_stream_state_changed(self, data: Any) -> None:
         try:
             attributes = self._build_event_attributes(data)
             self._on_state_change(attributes)
@@ -178,7 +178,21 @@ class OBSEventListener:
                 timeout=self._config.obs_timeout,
                 subs=obs.Subs.OUTPUTS,
             )
-            client.callback.register(self._on_stream_state_changed)
+            client.callback.register(self.on_stream_state_changed)
+            # obsws_python dispatches events by matching the OBS event name to a
+            # callback named ``on_<snake_case_event>`` (see Callback.trigger). If
+            # ``on_stream_state_changed`` ever gets renamed, registration succeeds
+            # silently but the handler never fires and every stream-state event is
+            # dropped. Verify the library actually recognises our handler.
+            registered = client.callback.get()
+            if "StreamStateChanged" not in registered:
+                logger.warning(
+                    "OBS event listener did not register a StreamStateChanged "
+                    "handler (recognised: %s); stream-state events will be "
+                    "dropped. The callback method must be named "
+                    "'on_stream_state_changed' to match obsws_python dispatch.",
+                    registered,
+                )
             self._client = client
         except Exception as exc:  # noqa: BLE001 - listener must not break scrape loop
             self._client = None
