@@ -37,6 +37,24 @@ On a connection or protocol error the scrape emits an `obs.scrape` log event at
 `ERROR` severity with `obs.connected=false`, the exception is recorded as
 `exception.*` attributes, and the client reconnects on the next cycle.
 
+## Stream state events
+
+In addition to the periodic `obs.scrape` event, the service subscribes to OBS
+output events and emits an **event-driven** `obs.stream_state_changed` log event
+each time the stream output transitions (start, stop, reconnect). Because it is
+push-based, it captures short-lived reconnects that can occur between scrape
+intervals — making it the authoritative signal for the upstream endpoint (e.g.
+YouTube) dropping the connection.
+
+| Attribute | Description |
+| --- | --- |
+| `obs.stream.output_active` | Stream output active after the transition (0/1) |
+| `obs.stream.output_state` | OBS output state, e.g. `OBS_WEBSOCKET_OUTPUT_RECONNECTING`, `..._RECONNECTED`, `..._STOPPED`, `..._STARTED` |
+
+The listener runs on a background thread and is reconnected automatically on the
+next scrape cycle if OBS disconnects; listener failures never interrupt the
+scrape loop.
+
 ## Configuration
 
 All configuration is via environment variables:

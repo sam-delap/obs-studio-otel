@@ -150,22 +150,29 @@ On success the script prints the dashboard URL, e.g.
 ### The dashboard
 
 [`scripts/obs-network-dashboard.json`](../scripts/obs-network-dashboard.json)
-defines 11 panels, all filtered to `service.name = obs-studio-scraper`.
-Derived views (percentages) are computed at query time via SigNoz query
-formulas rather than baked into the scraper, so new views can be added as
-panels without changing the emitter:
+defines 7 panels, all filtered to `service.name = obs-studio-scraper`. It is
+scoped to the three ways an OBS→YouTube stream drops frames; general health /
+built-in-editor metrics (render-thread frames, FPS, render time, memory, bytes)
+are intentionally excluded. Derived views (percentages) are computed at query
+time via SigNoz query formulas rather than baked into the scraper, so new views
+can be added as panels without changing the emitter:
 
-| Panel | Metric |
+| Panel | Failure mode / signal |
 | --- | --- |
-| Stream Output Active | `obs.stream.output_active` (0/1 over time) |
-| Network Congestion (current / over time) | `obs.stream.output_congestion` × 100 (query-time %) |
-| Dropped Frames % (current / over time) | `obs.stream.output_skipped_frames` / `obs.stream.output_total_frames` × 100 (query-time %) |
-| Output Bytes Sent | `obs.stream.output_bytes` |
-| Output Frames: total vs skipped | `obs.stream.output_total_frames`, `obs.stream.output_skipped_frames` |
-| Dropped Frames vs. Reconnection Events | dropped % vs `obs.stream.output_reconnecting` (upstream RTMPS) |
-| Active FPS | `obs.stats.active_fps` |
-| Avg Frame Render Time | `obs.stats.average_frame_render_time_ms` |
-| Scrape Health | `count()` of `obs.scrape` log events grouped by `severity_text` (INFO/ERROR) |
+| Frames Dropped on the Wire (%) | Shared overview: `obs.stream.output_skipped_frames` / `obs.stream.output_total_frames` × 100 |
+| Mode 1: Network Congestion / Buffer Saturation | `obs.stream.output_congestion` × 100 vs `obs.stream.output_reconnecting` — congestion saturating with no reconnect = internal network can't drain OBS's buffer |
+| Mode 1: Congestion (current) | `obs.stream.output_congestion` × 100 (query-time %, last value) |
+| Mode 2: YouTube Endpoint Disconnects (sampled) | `obs.stream.output_reconnecting` vs wire-dropped % — periodic sample of upstream RTMPS drops |
+| Mode 2: Stream State Transitions (events) | `count()` of `obs.stream_state_changed` grouped by `obs.stream.output_state` — event-driven, catches reconnects between scrapes |
+| Mode 3: OBS Output Send Failures (%) | `obs.stats.output_skipped_frames` / `obs.stats.output_total_frames` × 100 (output/encoder thread, not render) |
+| Mode 3: OBS Send Drop % (current) | same as above, last value |
+
+> **String vs bool in SigNoz.** Booleans (`output_active`, `output_reconnecting`)
+> are emitted as 0/1 integers so they can be aggregated (`max`/`avg`) — a raw
+> bool renders as NaN. The `obs.stream.output_state` string is handled the
+> opposite way: it is used only as a **group-by dimension** (one series per
+> state) via `count()`, never aggregated as a number. Follow this convention for
+> any new panels: numbers for metrics, strings for dimensions/filters.
 
 To re-create or update the dashboard, edit the JSON and re-run the script (it
 creates a new dashboard each run).
@@ -173,10 +180,15 @@ creates a new dashboard each run).
 ## 5. Verify
 
 - **UI:** open the dashboard URL printed by the script. While OBS is idle the
-  network panels read `0`; start streaming in OBS to see congestion, bytes, and
-  frame counters move. FPS, memory, and render-time panels populate immediately.
-- **Scrape Health** should show a steady stream of `INFO` events. A drop to zero
-  or a rise in `ERROR` indicates the scraper or its OBS connection is failing.
+  panels read `0`; start streaming in OBS to see congestion, dropped-frame %, and
+  the frame counters move.
+- **Mode 2 events:** start/stop streaming (or briefly drop the network) to see
+  `obs.stream_state_changed` events appear in the "Stream State Transitions"
+  panel, grouped by state (e.g. `OBS_WEBSOCKET_OUTPUT_STARTED`,
+  `..._RECONNECTING`, `..._STOPPED`).
+- **Distinguishing the modes:** sustained congestion approaching 100% with no
+  reconnect = Mode 1; reconnect spikes / state transitions = Mode 2; output-thread
+  send drops while congestion is low and no reconnect = Mode 3.
 
 ## 6. Teardown
 
