@@ -18,12 +18,6 @@ def _safe(value: float | int | None) -> float | int:
     return value if value is not None else 0
 
 
-def _dropped_pct(skipped: float | None, total: float | None) -> float:
-    if not total:
-        return 0.0
-    return round((float(skipped or 0) / float(total)) * 100.0, 4)
-
-
 class OBSScraper:
     """Manages a single OBS WebSocket connection and metric retrieval.
 
@@ -83,17 +77,17 @@ class OBSScraper:
         attributes: dict[str, Any] = {
             "obs.connected": True,
             # --- Stream health / network (GetStreamStatus) ---
-            "obs.stream.output_active": bool(stream.output_active),
-            "obs.stream.output_reconnecting": bool(stream.output_reconnecting),
+            # output_active / output_reconnecting are emitted as 0/1 integers
+            # (not bools) so SigNoz can aggregate them; the raw boolean type
+            # cannot be averaged/maxed and renders as NaN in panels.
+            "obs.stream.output_active": int(bool(stream.output_active)),
+            "obs.stream.output_reconnecting": int(bool(stream.output_reconnecting)),
             "obs.stream.output_timecode": str(stream.output_timecode),
             "obs.stream.output_duration_ms": _safe(stream.output_duration),
             "obs.stream.output_congestion": _safe(stream.output_congestion),
             "obs.stream.output_bytes": _safe(stream.output_bytes),
             "obs.stream.output_skipped_frames": _safe(stream.output_skipped_frames),
             "obs.stream.output_total_frames": _safe(stream.output_total_frames),
-            "obs.stream.output_dropped_frames_pct": _dropped_pct(
-                stream.output_skipped_frames, stream.output_total_frames
-            ),
             # --- OBS / session stats (GetStats) ---
             "obs.stats.cpu_usage": _safe(stats.cpu_usage),
             "obs.stats.memory_usage_mb": _safe(stats.memory_usage),

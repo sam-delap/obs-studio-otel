@@ -15,15 +15,14 @@ Each `obs.scrape` log event carries:
 | Attribute | Source | Description |
 | --- | --- | --- |
 | `obs.connected` | — | Whether the scrape connected successfully |
-| `obs.stream.output_active` | GetStreamStatus | Stream output is active |
-| `obs.stream.output_reconnecting` | GetStreamStatus | Output is reconnecting |
+| `obs.stream.output_active` | GetStreamStatus | Stream output is active (0/1) |
+| `obs.stream.output_reconnecting` | GetStreamStatus | Output is reconnecting (0/1) |
 | `obs.stream.output_timecode` | GetStreamStatus | Current output timecode |
 | `obs.stream.output_duration_ms` | GetStreamStatus | Output duration (ms) |
 | `obs.stream.output_congestion` | GetStreamStatus | Network congestion (0.0–1.0) |
 | `obs.stream.output_bytes` | GetStreamStatus | Bytes sent by the output |
 | `obs.stream.output_skipped_frames` | GetStreamStatus | Frames skipped by the output |
 | `obs.stream.output_total_frames` | GetStreamStatus | Total frames delivered |
-| `obs.stream.output_dropped_frames_pct` | derived | skipped / total × 100 |
 | `obs.stats.cpu_usage` | GetStats | CPU usage (%) |
 | `obs.stats.memory_usage_mb` | GetStats | Memory used by OBS (MB) |
 | `obs.stats.available_disk_space_mb` | GetStats | Free recording disk space (MB) |
