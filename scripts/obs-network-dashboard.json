@@ -1,215 +1,22 @@
 {
-  "title": "OBS Studio — Stream Health & Network",
-  "description": "Network and stream-health metrics scraped from the OBS WebSocket and emitted as obs.scrape log events by obs-studio-otel. Visualizes congestion, throughput, dropped/skipped frames, and supporting render/system stats.",
-  "tags": ["obs", "obs-studio", "streaming", "network", "obs-studio-otel"],
+  "title": "OBS Studio — Stream Failure Modes",
+  "description": "Scoped to the three ways an OBS→YouTube stream drops frames: (1) internal network congestion exceeding OBS's send buffer, (2) the YouTube endpoint disconnecting, and (3) OBS itself failing to send frames. All series derive from obs.scrape and obs.stream_state_changed log events emitted by obs-studio-otel. General health / built-in-editor metrics (render-thread frames, FPS, render time, memory, bytes) are intentionally excluded.",
+  "tags": ["obs", "obs-studio", "streaming", "network", "failure-modes", "obs-studio-otel"],
   "layout": [
-    { "i": "w-output-active", "x": 0, "y": 0, "w": 12, "h": 6, "moved": false, "static": false },
-    { "i": "w-congestion", "x": 0, "y": 6, "w": 4, "h": 4, "moved": false, "static": false },
-    { "i": "w-dropped-pct", "x": 4, "y": 6, "w": 4, "h": 4, "moved": false, "static": false },
-    { "i": "w-bytes-rate", "x": 0, "y": 10, "w": 6, "h": 6, "moved": false, "static": false },
-    { "i": "w-congestion-ts", "x": 6, "y": 10, "w": 6, "h": 6, "moved": false, "static": false },
-    { "i": "w-dropped-pct-ts", "x": 0, "y": 16, "w": 6, "h": 6, "moved": false, "static": false },
-    { "i": "w-frames", "x": 6, "y": 16, "w": 6, "h": 6, "moved": false, "static": false },
-    { "i": "w-dropped-vs-reconnect", "x": 0, "y": 22, "w": 12, "h": 6, "moved": false, "static": false },
-    { "i": "w-fps", "x": 0, "y": 28, "w": 6, "h": 6, "moved": false, "static": false },
-    { "i": "w-render-time", "x": 6, "y": 28, "w": 6, "h": 6, "moved": false, "static": false },
-    { "i": "w-scrape-health", "x": 0, "y": 34, "w": 12, "h": 6, "moved": false, "static": false }
+    { "i": "w-overview-dropped", "x": 0, "y": 0, "w": 12, "h": 6, "moved": false, "static": false },
+    { "i": "w-mode1-congestion", "x": 0, "y": 6, "w": 8, "h": 6, "moved": false, "static": false },
+    { "i": "w-mode1-current", "x": 8, "y": 6, "w": 4, "h": 6, "moved": false, "static": false },
+    { "i": "w-mode2-reconnect", "x": 0, "y": 12, "w": 6, "h": 6, "moved": false, "static": false },
+    { "i": "w-mode2-events", "x": 6, "y": 12, "w": 6, "h": 6, "moved": false, "static": false },
+    { "i": "w-mode3-send", "x": 0, "y": 18, "w": 8, "h": 6, "moved": false, "static": false },
+    { "i": "w-mode3-current", "x": 8, "y": 18, "w": 4, "h": 6, "moved": false, "static": false }
   ],
   "variables": {},
   "widgets": [
     {
-      "id": "w-output-active",
-      "title": "Stream Output Active",
-      "description": "Whether the OBS stream output is active over time (1 = streaming, 0 = idle). Emitted as a 0/1 integer.",
-      "panelTypes": "graph",
-      "yAxisUnit": "none",
-      "query": {
-        "queryType": "builder",
-        "builder": {
-          "queryData": [
-            {
-              "queryName": "A",
-              "expression": "A",
-              "dataSource": "logs",
-              "aggregateOperator": "max",
-              "timeAggregation": "max",
-              "spaceAggregation": "max",
-              "aggregateAttribute": { "key": "obs.stream.output_active", "dataType": "float64", "type": "attribute", "isColumn": false },
-              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
-              "groupBy": [],
-              "having": [],
-              "legend": "output active",
-              "disabled": false,
-              "stepInterval": 60,
-              "orderBy": [],
-              "limit": null,
-              "reduceTo": "avg"
-            }
-          ],
-          "queryFormulas": []
-        }
-      }
-    },
-    {
-      "id": "w-congestion",
-      "title": "Network Congestion (current)",
-      "description": "OBS output network congestion as a percentage (raw 0.0–1.0 value × 100, computed at query time). Sustained high values indicate the encoder cannot push data fast enough.",
-      "panelTypes": "value",
-      "yAxisUnit": "percent",
-      "query": {
-        "queryType": "builder",
-        "builder": {
-          "queryData": [
-            {
-              "queryName": "A",
-              "expression": "A",
-              "dataSource": "logs",
-              "aggregateOperator": "avg",
-              "timeAggregation": "avg",
-              "spaceAggregation": "avg",
-              "aggregateAttribute": { "key": "obs.stream.output_congestion", "dataType": "float64", "type": "attribute", "isColumn": false },
-              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
-              "groupBy": [],
-              "having": [],
-              "legend": "congestion",
-              "disabled": true,
-              "stepInterval": 60,
-              "orderBy": [],
-              "limit": null,
-              "reduceTo": "last"
-            }
-          ],
-          "queryFormulas": [
-            { "queryName": "F1", "expression": "A * 100", "legend": "congestion %", "disabled": false, "reduceTo": "last" }
-          ]
-        }
-      }
-    },
-    {
-      "id": "w-dropped-pct",
-      "title": "Dropped Frames % (current)",
-      "description": "Percentage of output frames dropped (skipped / total × 100), computed at query time from raw frame counters. Network-driven frame loss.",
-      "panelTypes": "value",
-      "yAxisUnit": "percent",
-      "query": {
-        "queryType": "builder",
-        "builder": {
-          "queryData": [
-            {
-              "queryName": "A",
-              "expression": "A",
-              "dataSource": "logs",
-              "aggregateOperator": "max",
-              "timeAggregation": "max",
-              "spaceAggregation": "max",
-              "aggregateAttribute": { "key": "obs.stream.output_skipped_frames", "dataType": "float64", "type": "attribute", "isColumn": false },
-              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
-              "groupBy": [],
-              "having": [],
-              "legend": "skipped frames",
-              "disabled": true,
-              "stepInterval": 60,
-              "orderBy": [],
-              "limit": null,
-              "reduceTo": "last"
-            },
-            {
-              "queryName": "B",
-              "expression": "B",
-              "dataSource": "logs",
-              "aggregateOperator": "max",
-              "timeAggregation": "max",
-              "spaceAggregation": "max",
-              "aggregateAttribute": { "key": "obs.stream.output_total_frames", "dataType": "float64", "type": "attribute", "isColumn": false },
-              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
-              "groupBy": [],
-              "having": [],
-              "legend": "total frames",
-              "disabled": true,
-              "stepInterval": 60,
-              "orderBy": [],
-              "limit": null,
-              "reduceTo": "last"
-            }
-          ],
-          "queryFormulas": [
-            { "queryName": "F1", "expression": "A / B * 100", "legend": "dropped %", "disabled": false, "reduceTo": "last" }
-          ]
-        }
-      }
-    },
-    {
-      "id": "w-bytes-rate",
-      "title": "Output Bytes Sent (cumulative)",
-      "description": "Total bytes sent by the OBS stream output. Rises while streaming; flat when idle.",
-      "panelTypes": "graph",
-      "yAxisUnit": "bytes",
-      "query": {
-        "queryType": "builder",
-        "builder": {
-          "queryData": [
-            {
-              "queryName": "A",
-              "expression": "A",
-              "dataSource": "logs",
-              "aggregateOperator": "max",
-              "timeAggregation": "max",
-              "spaceAggregation": "max",
-              "aggregateAttribute": { "key": "obs.stream.output_bytes", "dataType": "float64", "type": "attribute", "isColumn": false },
-              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
-              "groupBy": [],
-              "having": [],
-              "legend": "bytes sent",
-              "disabled": false,
-              "stepInterval": 60,
-              "orderBy": [],
-              "limit": null,
-              "reduceTo": "last"
-            }
-          ],
-          "queryFormulas": []
-        }
-      }
-    },
-    {
-      "id": "w-congestion-ts",
-      "title": "Network Congestion (over time)",
-      "description": "Average OBS output congestion over time as a percentage (raw 0.0–1.0 × 100, computed at query time).",
-      "panelTypes": "graph",
-      "yAxisUnit": "percent",
-      "query": {
-        "queryType": "builder",
-        "builder": {
-          "queryData": [
-            {
-              "queryName": "A",
-              "expression": "A",
-              "dataSource": "logs",
-              "aggregateOperator": "avg",
-              "timeAggregation": "avg",
-              "spaceAggregation": "avg",
-              "aggregateAttribute": { "key": "obs.stream.output_congestion", "dataType": "float64", "type": "attribute", "isColumn": false },
-              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
-              "groupBy": [],
-              "having": [],
-              "legend": "congestion",
-              "disabled": true,
-              "stepInterval": 60,
-              "orderBy": [],
-              "limit": null,
-              "reduceTo": "avg"
-            }
-          ],
-          "queryFormulas": [
-            { "queryName": "F1", "expression": "A * 100", "legend": "congestion %", "disabled": false, "reduceTo": "avg" }
-          ]
-        }
-      }
-    },
-    {
-      "id": "w-dropped-pct-ts",
-      "title": "Dropped Frames % (over time)",
-      "description": "Output dropped-frame percentage over time (skipped / total × 100), computed at query time from raw frame counters.",
+      "id": "w-overview-dropped",
+      "title": "Frames Dropped on the Wire (%)",
+      "description": "Top-level failure signal: percentage of stream-output frames dropped (obs.stream.output_skipped_frames / obs.stream.output_total_frames × 100), computed at query time. Any sustained rise means the stream is failing; the Mode 1/2/3 panels below explain why.",
       "panelTypes": "graph",
       "yAxisUnit": "percent",
       "query": {
@@ -260,9 +67,9 @@
       }
     },
     {
-      "id": "w-frames",
-      "title": "Output Frames: total vs skipped",
-      "description": "Total delivered vs skipped output frames over time.",
+      "id": "w-mode1-congestion",
+      "title": "Mode 1: Network Congestion / Buffer Saturation",
+      "description": "Internal network congestion exceeding OBS's send buffer. Overlays output congestion as a percent (obs.stream.output_congestion × 100) with the reconnecting state (0/1). Congestion saturating toward 100% WHILE reconnecting stays 0 means the local/internal network cannot drain OBS's buffer fast enough — distinct from a YouTube disconnect (Mode 2).",
       "panelTypes": "graph",
       "yAxisUnit": "none",
       "query": {
@@ -273,47 +80,84 @@
               "queryName": "A",
               "expression": "A",
               "dataSource": "logs",
-              "aggregateOperator": "max",
-              "timeAggregation": "max",
-              "spaceAggregation": "max",
-              "aggregateAttribute": { "key": "obs.stream.output_total_frames", "dataType": "float64", "type": "attribute", "isColumn": false },
+              "aggregateOperator": "avg",
+              "timeAggregation": "avg",
+              "spaceAggregation": "avg",
+              "aggregateAttribute": { "key": "obs.stream.output_congestion", "dataType": "float64", "type": "attribute", "isColumn": false },
               "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
               "groupBy": [],
               "having": [],
-              "legend": "total frames",
-              "disabled": false,
+              "legend": "congestion",
+              "disabled": true,
               "stepInterval": 60,
               "orderBy": [],
               "limit": null,
-              "reduceTo": "last"
+              "reduceTo": "avg"
             },
             {
-              "queryName": "B",
-              "expression": "B",
+              "queryName": "C",
+              "expression": "C",
               "dataSource": "logs",
               "aggregateOperator": "max",
               "timeAggregation": "max",
               "spaceAggregation": "max",
-              "aggregateAttribute": { "key": "obs.stream.output_skipped_frames", "dataType": "float64", "type": "attribute", "isColumn": false },
+              "aggregateAttribute": { "key": "obs.stream.output_reconnecting", "dataType": "float64", "type": "attribute", "isColumn": false },
               "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
               "groupBy": [],
               "having": [],
-              "legend": "skipped frames",
+              "legend": "reconnecting (0/1)",
               "disabled": false,
+              "stepInterval": 60,
+              "orderBy": [],
+              "limit": null,
+              "reduceTo": "avg"
+            }
+          ],
+          "queryFormulas": [
+            { "queryName": "F1", "expression": "A * 100", "legend": "congestion %", "disabled": false, "reduceTo": "avg" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "w-mode1-current",
+      "title": "Mode 1: Congestion (current)",
+      "description": "Current OBS output congestion as a percentage (obs.stream.output_congestion × 100). A value approaching 100% indicates OBS's send buffer is saturating against the internal network.",
+      "panelTypes": "value",
+      "yAxisUnit": "percent",
+      "query": {
+        "queryType": "builder",
+        "builder": {
+          "queryData": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "dataSource": "logs",
+              "aggregateOperator": "avg",
+              "timeAggregation": "avg",
+              "spaceAggregation": "avg",
+              "aggregateAttribute": { "key": "obs.stream.output_congestion", "dataType": "float64", "type": "attribute", "isColumn": false },
+              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
+              "groupBy": [],
+              "having": [],
+              "legend": "congestion",
+              "disabled": true,
               "stepInterval": 60,
               "orderBy": [],
               "limit": null,
               "reduceTo": "last"
             }
           ],
-          "queryFormulas": []
+          "queryFormulas": [
+            { "queryName": "F1", "expression": "A * 100", "legend": "congestion %", "disabled": false, "reduceTo": "last" }
+          ]
         }
       }
     },
     {
-      "id": "w-dropped-vs-reconnect",
-      "title": "Dropped Frames vs. Reconnection Events",
-      "description": "Overlays the output dropped-frame percentage (skipped / total × 100) with the output reconnecting state (0/1). When reconnections spike alongside dropped frames, frames are being lost because of an issue with the upstream RTMPS server (e.g. YouTube) rather than local encoding.",
+      "id": "w-mode2-reconnect",
+      "title": "Mode 2: YouTube Endpoint Disconnects (sampled)",
+      "description": "Overlays the reconnecting state (obs.stream.output_reconnecting, 0/1) with wire-dropped % (obs.stream.output_skipped_frames / obs.stream.output_total_frames × 100). Reconnect spikes coincident with dropped frames indicate the upstream RTMPS endpoint (YouTube) dropped the connection. This is the periodic-sample view; the events panel beside it catches reconnects between samples.",
       "panelTypes": "graph",
       "yAxisUnit": "none",
       "query": {
@@ -382,75 +226,9 @@
       }
     },
     {
-      "id": "w-fps",
-      "title": "Active FPS",
-      "description": "Rendered frames per second reported by OBS GetStats.",
-      "panelTypes": "graph",
-      "yAxisUnit": "none",
-      "query": {
-        "queryType": "builder",
-        "builder": {
-          "queryData": [
-            {
-              "queryName": "A",
-              "expression": "A",
-              "dataSource": "logs",
-              "aggregateOperator": "avg",
-              "timeAggregation": "avg",
-              "spaceAggregation": "avg",
-              "aggregateAttribute": { "key": "obs.stats.active_fps", "dataType": "float64", "type": "attribute", "isColumn": false },
-              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
-              "groupBy": [],
-              "having": [],
-              "legend": "fps",
-              "disabled": false,
-              "stepInterval": 60,
-              "orderBy": [],
-              "limit": null,
-              "reduceTo": "avg"
-            }
-          ],
-          "queryFormulas": []
-        }
-      }
-    },
-    {
-      "id": "w-render-time",
-      "title": "Avg Frame Render Time (ms)",
-      "description": "Average frame render time. Rising values can precede skipped/dropped frames.",
-      "panelTypes": "graph",
-      "yAxisUnit": "ms",
-      "query": {
-        "queryType": "builder",
-        "builder": {
-          "queryData": [
-            {
-              "queryName": "A",
-              "expression": "A",
-              "dataSource": "logs",
-              "aggregateOperator": "avg",
-              "timeAggregation": "avg",
-              "spaceAggregation": "avg",
-              "aggregateAttribute": { "key": "obs.stats.average_frame_render_time_ms", "dataType": "float64", "type": "attribute", "isColumn": false },
-              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
-              "groupBy": [],
-              "having": [],
-              "legend": "render time",
-              "disabled": false,
-              "stepInterval": 60,
-              "orderBy": [],
-              "limit": null,
-              "reduceTo": "avg"
-            }
-          ],
-          "queryFormulas": []
-        }
-      }
-    },
-    {
-      "id": "w-scrape-health",
-      "title": "Scrape Health (events per interval)",
-      "description": "Count of obs.scrape log events grouped by severity (INFO = OK, ERROR = failed scrape). A drop to zero or a rise in ERROR means the scraper or OBS connection is failing.",
+      "id": "w-mode2-events",
+      "title": "Mode 2: Stream State Transitions (events)",
+      "description": "Count of obs.stream_state_changed log events grouped by obs.stream.output_state. Event-driven, so it captures short reconnects that occur between scrape samples (OBS_WEBSOCKET_OUTPUT_RECONNECTING / _RECONNECTED / _STOPPED). The state string is used only as a group-by dimension (one series per state), never aggregated as a number.",
       "panelTypes": "graph",
       "yAxisUnit": "none",
       "query": {
@@ -465,10 +243,10 @@
               "timeAggregation": "count",
               "spaceAggregation": "sum",
               "aggregateAttribute": { "key": "", "dataType": "", "type": "", "isColumn": false },
-              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
-              "groupBy": [ { "key": "severity_text", "dataType": "string", "type": "", "isColumn": true } ],
+              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" }, { "key": { "key": "obs.stream.output_state", "dataType": "string", "type": "tag", "isColumn": false }, "op": "exists", "value": "" } ] },
+              "groupBy": [ { "key": "obs.stream.output_state", "dataType": "string", "type": "tag", "isColumn": false } ],
               "having": [],
-              "legend": "scrapes",
+              "legend": "{{obs.stream.output_state}}",
               "disabled": false,
               "stepInterval": 60,
               "orderBy": [],
@@ -477,6 +255,112 @@
             }
           ],
           "queryFormulas": []
+        }
+      }
+    },
+    {
+      "id": "w-mode3-send",
+      "title": "Mode 3: OBS Output Send Failures (%)",
+      "description": "OBS itself failing to send frames to YouTube: obs.stats.output_skipped_frames / obs.stats.output_total_frames × 100 (the GetStats output/encoder thread, NOT the render thread). Distinguished from Mode 1 because congestion is not saturated, and from Mode 2 because there is no reconnect. Render-thread drops are excluded by design (that is built-in-editor territory).",
+      "panelTypes": "graph",
+      "yAxisUnit": "percent",
+      "query": {
+        "queryType": "builder",
+        "builder": {
+          "queryData": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "dataSource": "logs",
+              "aggregateOperator": "max",
+              "timeAggregation": "max",
+              "spaceAggregation": "max",
+              "aggregateAttribute": { "key": "obs.stats.output_skipped_frames", "dataType": "float64", "type": "attribute", "isColumn": false },
+              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
+              "groupBy": [],
+              "having": [],
+              "legend": "skipped frames",
+              "disabled": true,
+              "stepInterval": 60,
+              "orderBy": [],
+              "limit": null,
+              "reduceTo": "avg"
+            },
+            {
+              "queryName": "B",
+              "expression": "B",
+              "dataSource": "logs",
+              "aggregateOperator": "max",
+              "timeAggregation": "max",
+              "spaceAggregation": "max",
+              "aggregateAttribute": { "key": "obs.stats.output_total_frames", "dataType": "float64", "type": "attribute", "isColumn": false },
+              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
+              "groupBy": [],
+              "having": [],
+              "legend": "total frames",
+              "disabled": true,
+              "stepInterval": 60,
+              "orderBy": [],
+              "limit": null,
+              "reduceTo": "avg"
+            }
+          ],
+          "queryFormulas": [
+            { "queryName": "F1", "expression": "A / B * 100", "legend": "send drop %", "disabled": false, "reduceTo": "avg" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "w-mode3-current",
+      "title": "Mode 3: OBS Send Drop % (current)",
+      "description": "Current OBS output-thread send-drop percentage (obs.stats.output_skipped_frames / obs.stats.output_total_frames × 100). Elevated while congestion is low and no reconnect is occurring points to OBS-side send failure rather than the network (Mode 1) or YouTube (Mode 2).",
+      "panelTypes": "value",
+      "yAxisUnit": "percent",
+      "query": {
+        "queryType": "builder",
+        "builder": {
+          "queryData": [
+            {
+              "queryName": "A",
+              "expression": "A",
+              "dataSource": "logs",
+              "aggregateOperator": "max",
+              "timeAggregation": "max",
+              "spaceAggregation": "max",
+              "aggregateAttribute": { "key": "obs.stats.output_skipped_frames", "dataType": "float64", "type": "attribute", "isColumn": false },
+              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
+              "groupBy": [],
+              "having": [],
+              "legend": "skipped frames",
+              "disabled": true,
+              "stepInterval": 60,
+              "orderBy": [],
+              "limit": null,
+              "reduceTo": "last"
+            },
+            {
+              "queryName": "B",
+              "expression": "B",
+              "dataSource": "logs",
+              "aggregateOperator": "max",
+              "timeAggregation": "max",
+              "spaceAggregation": "max",
+              "aggregateAttribute": { "key": "obs.stats.output_total_frames", "dataType": "float64", "type": "attribute", "isColumn": false },
+              "filters": { "op": "AND", "items": [ { "key": { "key": "service.name", "dataType": "string", "type": "resource", "isColumn": true }, "op": "=", "value": "obs-studio-scraper" } ] },
+              "groupBy": [],
+              "having": [],
+              "legend": "total frames",
+              "disabled": true,
+              "stepInterval": 60,
+              "orderBy": [],
+              "limit": null,
+              "reduceTo": "last"
+            }
+          ],
+          "queryFormulas": [
+            { "queryName": "F1", "expression": "A / B * 100", "legend": "send drop %", "disabled": false, "reduceTo": "last" }
+          ]
         }
       }
     }

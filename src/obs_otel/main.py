@@ -5,17 +5,20 @@ from __future__ import annotations
 import logging
 import signal
 import threading
+from functools import partial
 from types import FrameType
+from typing import Any
 
 from opentelemetry._logs import Logger, SeverityNumber
 
 from .config import Config
-from .scraper import OBSScraper
+from .scraper import OBSEventListener, OBSScraper
 from .telemetry import setup_logging
 
 logger = logging.getLogger(__name__)
 
 SCRAPE_EVENT_NAME = "obs.scrape"
+STREAM_STATE_EVENT_NAME = "obs.stream_state_changed"
 
 
 class _Shutdown:
@@ -64,6 +67,21 @@ def _scrape_once(otel_logger: Logger, scraper: OBSScraper) -> None:
     )
 
 
+def _emit_stream_state(otel_logger: Logger, attributes: dict[str, Any]) -> None:
+    """Emit a stream state transition pushed by the OBS event listener."""
+    logger.info(
+        "OBS stream state changed: %s",
+        attributes.get("obs.stream.output_state"),
+    )
+    otel_logger.emit(
+        event_name=STREAM_STATE_EVENT_NAME,
+        severity_number=SeverityNumber.INFO,
+        severity_text="INFO",
+        body=STREAM_STATE_EVENT_NAME,
+        attributes=attributes,
+    )
+
+
 def main() -> int:
     logging.basicConfig(
         level=logging.INFO,
@@ -81,17 +99,25 @@ def main() -> int:
 
     provider, otel_logger = setup_logging(config)
     scraper = OBSScraper(config)
+    listener = OBSEventListener(
+        config,
+        on_state_change=partial(_emit_stream_state, otel_logger),
+    )
 
     shutdown = _Shutdown()
     shutdown.install()
 
     try:
+        listener.ensure_running()
         while not shutdown.requested:
+            # Recover the event listener if OBS dropped its websocket.
+            listener.ensure_running()
             _scrape_once(otel_logger, scraper)
             if shutdown.wait(config.scrape_interval_seconds):
                 break
     finally:
         logger.info("Flushing telemetry and closing connections...")
+        listener.close()
         scraper.close()
         provider.shutdown()
 
